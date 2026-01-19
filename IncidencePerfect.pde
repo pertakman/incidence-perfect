@@ -34,8 +34,8 @@ LiquidCrystal lcd(RS, ENABLE, D0, D1, D2, D3); // Initialize lcd
 byte currentAngle = 0; // Currently active angle 
 boolean holdAngles[2] = {false, false}; // Flags for angle hold 
 boolean relativeAngles[2] = {false, false}; // Flags for relative angles
-float pitchAngle, rollAngle; // pitch and roll angle variables
-
+float pitchAngle, rollAngle, thetaAngle; // pitch and roll angle variables
+float accelerationmagnitude;
 
 void setup()
 {
@@ -86,12 +86,37 @@ void loop()
   }
   
   // Update accelerometer and update pitch and roll unless hold is turned on
-  acc.update();
+  int N = 10;
+  float pitch = 0;
+  float roll = 0;
+  float theta = 0;
+  accelerationmagnitude = 0;
+  for (int i = 0; i < N; i++)
+  {
+    acc.update();
+    pitch += acc.pitch();
+    roll += acc.roll();
+    theta += acc.theta();
+    accelerationmagnitude += acc.accelerationmagnitude();
+  }
+  pitch = pitch/N;
+  roll = roll/N;
+  theta = theta/N;
+  accelerationmagnitude = accelerationmagnitude/N;
+
+  if (!holdAngles[0]) pitchAngle = pitch;
+  if (!holdAngles[1]) rollAngle = roll;
+  if (!holdAngles[2]) thetaAngle = theta;
+  acc.dump();
+  
+  /*acc.update();
   if (!holdAngles[0]) pitchAngle = acc.pitch();
   if (!holdAngles[1]) rollAngle = acc.roll();
+  acc.milligee();
+  acc.dump();*/
   
   lcdMeasurement(); // Show measurement on LCD
-  delay(200);
+  delay(100);
 }
 
 // Display splash screen on LCD
@@ -101,7 +126,7 @@ void lcdSplashScreen()
   lcd.setCursor(0,0);
   lcd.print("Incidence");
   lcd.setCursor(0,1);
-  lcd.print("Perfect v1.0b");
+  lcd.print("Perfect v1.1b");
   delay(2000);
 }
 
@@ -145,16 +170,14 @@ void lcdMeasurement()
 void calibrationMenu()
 {
   int currentAxis = 0; // Set current axis to x-axis
-  int currentDirection = -1; // Set current direction to negative direction
 
-  lcdCalibration(currentAxis, currentDirection); // display calibration menu on LCD
+  lcdCalibration(currentAxis); // display calibration menu on LCD
   
   // Make sure KEYSEL has been released
   char key;
   do
   {
      key = KeyScan();
-     //delay(30);
   } while (key != KEYINV);
   oldKey = key;
 
@@ -169,36 +192,34 @@ void calibrationMenu()
       switch(key)
       {
         case KEYLEFT:
-          if (currentDirection == -1) currentDirection = 1;
-          else currentDirection = -1;
           break;
         case KEYRIGHT:
-          if (currentDirection == -1) currentDirection = 1;
-          else currentDirection = -1;
           break;
         case KEYSEL:
-          acc.calibrate(currentAxis,currentDirection);
+          acc.getacal(currentAxis);  
           break;
         case KEYUP:
           currentAxis--;
-          if (currentAxis == -1) currentAxis = 2;
+          if (currentAxis < 0) currentAxis = 3;
           break;
         case KEYDOWN:
           currentAxis++;
-          if (currentAxis == 3) currentAxis = 0;
+          if (currentAxis > 3) currentAxis = 0;
           break;
       }
     }
     else if (key == KEYLEFT && millis()-keyDownTime > 2000)
     {
+      acc.calibrate();
       break;
     }
-    lcdCalibration(currentAxis, currentDirection); // display calibration menu on LCD
+    lcdCalibration(currentAxis); // display calibration menu on LCD
+    delay(100);
   }
 }
 
 // Display calibration menu on LCD 
-void lcdCalibration(int currentAxis, int currentDirection)
+void lcdCalibration(int currentAxis)
 {
   lcd.clear();
   lcd.setCursor(0,0);
@@ -206,30 +227,44 @@ void lcdCalibration(int currentAxis, int currentDirection)
   lcd.setCursor(0,1);
   if (currentAxis == 0)
   {
-    lcd.print("-X:");
-    lcd.print(acc._amin[currentAxis]);
-    lcd.print(",+X:");
-    lcd.print(acc._amax[currentAxis]);
+    lcd.print("X:");
+    for (int i = 0; i < 3; i++)
+    {
+      lcd.print(acc._acal[i][0]);
+      if (i != 2)
+        lcd.print(",");
+    }
   }
   if (currentAxis == 1)
   {
-    lcd.print("-Y:");
-    lcd.print(acc._amin[currentAxis]);
-    lcd.print(",+Y:");
-    lcd.print(acc._amax[currentAxis]);
+    lcd.print("Y:");
+    for (int i = 0; i < 3; i++)
+    {
+      lcd.print(acc._acal[i][1]);
+      if (i != 2)
+        lcd.print(",");
+    }
   }
   if (currentAxis == 2)
   {
-    lcd.print("-Z:");
-    lcd.print(acc._amin[currentAxis]);
-    lcd.print(",+Z:");
-    lcd.print(acc._amax[currentAxis]);
+    lcd.print("Z:");
+    for (int i = 0; i < 3; i++)
+    {
+      lcd.print(acc._acal[i][2]);
+      if (i != 2)
+        lcd.print(",");
+    }
   }
-  if (currentDirection == -1)
-    lcd.setCursor(1,1);
-  else
-    lcd.setCursor(10,1);
-  lcd.blink();
+  if (currentAxis == 3)
+  {
+    lcd.print("-Z:");
+    for (int i = 0; i < 3; i++)
+    {
+      lcd.print(acc._acal[i][3]);
+      if (i != 2)
+        lcd.print(",");
+    }
+  }
 }
 
 // Prints val on a ver 0012 text lcd with number of decimal places determined by precision
@@ -296,8 +331,6 @@ char PollKey()
   do
   {
      key = KeyScan();
-     delay(30);
   } while (key == KEYINV);
-  delay(80);
   return key;
 }
