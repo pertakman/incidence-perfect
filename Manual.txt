@@ -1,0 +1,39 @@
+Splash Screen: Incidence Perfect v1.0
+
+	Measurement Mode
+0	Pitch:	x.x	A/R	Toggle Absolute/Relative with Left/Right
+	Roll:	x.x	A/R	Toggle which measurement to control with Up/Down
+				Hold/Unhold values with Select
+
+Enter Calibration Mode: press and hold Select for 2 seconds
+
+1	Calibration Mode	Toggle -/+ direction with Left/Right
+	-X:1024,+X:1024		Select which axis to calibrate with Up/Down
+				Calibrate axis with Select
+
+2	Calibration Mode	Toggle -/+ direction with Left/Right
+	-Y:1024,+Y:1024		Select which axis to calibrate with Up/Down
+				Calibrate axis with Select
+
+3	Calibration Mode	Toggle -/+ direction with Left/Right
+	-Z:1024,+Z:1024		Select which axis to calibrate with Up/Down
+				Calibrate axis with Select
+
+Exit Calibration Menu: press and hold Select for 2 seconds
+
+Calibration Mode
+_axis, _direction
+calibrate() - acc.calibrate(_axis,_direction)
+axis()
+direction()
+
+Measurement Mode
+_hold, _measurement, _measurementtype[2]
+hold()
+measurement()
+measurementtype()
+
+
+menu system
+button listener
+button press and hold
